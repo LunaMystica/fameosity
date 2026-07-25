@@ -27,6 +27,10 @@
       "reputationMax": {
         "name": "Reputación Máxima"
       },
+      "autoExpandGroups": {
+        "name": "Expandir grupos de facción automáticamente",
+        "hint": "Al agrupar personajes por facción, expandir los grupos por defecto"
+      },
       "defaultActorMode": {
         "name": "Modo por defecto para Actores",
         "hint": "Modo para nuevos actores rastreados"
@@ -206,7 +210,8 @@
       "unnest": "Sacar del elemento padre",
       "add-child": "Añadir elemento hijo",
       "add-to-tracking": "Añadir al seguimiento",
-      "announce-wanted": "Anunciar estado de búsqueda y notificar a todos"
+      "announce-wanted": "Anunciar estado de búsqueda y notificar a todos",
+      "group-by-faction": "Agrupar personajes por facción"
     },
     "errors": {
       "saveFailed": "Fallo al guardar los datos de reputación",

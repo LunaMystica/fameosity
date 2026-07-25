@@ -126,18 +126,41 @@
       {{#if (or @root.isGM detail.canEdit)}}<button type="button" class="fame-detail-section-add" data-action="addActorRelation" data-entity-id="{{detail.id}}" data-rel-type="individual" data-tooltip="{{localize (concat @root.moduleId '.tooltips.add-relation')}}"><i class="fa-solid fa-plus"></i></button>{{/if}}
     </div>
     <div class="fame-detail-section-body fame-relation-drop-zone" data-entity-id="{{detail.id}}" data-rel-type="individual">
-      {{#each detail.npcRelations}}
+      {{#each detail.npcRelationGroups}}
+        <div class="fame-detail-rel-tree-header {{#if hidden}}is-hidden{{/if}}" style="{{indentStyle level}}" data-action="selectEntity" data-entity-type="faction" data-entity-id="{{id}}">
+          <span class="fame-nav-tree-toggle" data-action="toggleRelGroup" data-id="{{id}}"><i class="fa-solid fa-{{#if collapsed}}plus{{else}}minus{{/if}}-square"></i></span>
+          <img class="fame-detail-rel-img" src="{{image}}">
+          <span class="fame-detail-rel-name">{{name}}</span>
+          {{#if isPartyActive}}<i class="fa-solid fa-star fame-nav-item-star"></i>{{/if}}
+        </div>
+        {{#unless collapsed}}
+        {{#each rels}}
+          {{> "relations/partials/rel-row"
+            relId=pcId relName=pcName relImg=pcImg relValue=value relTier=tier relHidden=hidden
+            relType="individual" barId=(concat @root.detail.id ":" pcId)
+            entityType="actor" entityId=pcId
+            canEdit=(or @root.isGM @root.detail.canEdit)
+            relTypeKey="individual" sourceEntityId=@root.detail.id targetEntityId=pcId
+            showRemoveBtn=(or @root.isGM @root.detail.canEdit)
+            indentLevel=../memberLevel
+          }}
+        {{/each}}
+        {{/unless}}
+      {{/each}}
+      {{#if (and detail.npcRelationGroups.length detail.ungroupedNpcRelations.length)}}<div class="fame-group-divider"></div>{{/if}}
+      {{#each detail.ungroupedNpcRelations}}
         {{> "relations/partials/rel-row"
           relId=pcId relName=pcName relImg=pcImg relValue=value relTier=tier relHidden=hidden
-          relType="individual" barId=(concat ../detail.id ":" pcId)
+          relType="individual" barId=(concat @root.detail.id ":" pcId)
           entityType="actor" entityId=pcId
-          canEdit=(or @root.isGM ../detail.canEdit)
-          relTypeKey="individual" sourceEntityId=../detail.id targetEntityId=pcId
-          showRemoveBtn=(or @root.isGM ../detail.canEdit)
+          canEdit=(or @root.isGM @root.detail.canEdit)
+          relTypeKey="individual" sourceEntityId=@root.detail.id targetEntityId=pcId
+          showRemoveBtn=(or @root.isGM @root.detail.canEdit)
         }}
-      {{else}}
-        <div class="fame-no-items">{{localize (concat @root.moduleId '.relations.no-relations')}}</div>
       {{/each}}
+      {{#unless (or detail.npcRelationGroups.length detail.ungroupedNpcRelations.length)}}
+        <div class="fame-no-items">{{localize (concat @root.moduleId '.relations.no-relations')}}</div>
+      {{/unless}}
     </div>
   </div>
 
@@ -146,21 +169,29 @@
       <i class="fa-solid fa-chevron-right fame-section-chevron"></i>
       <i class="fa-solid fa-flag fame-section-icon"></i>
       <span>{{localize (concat @root.moduleId '.relations.to-factions')}}</span>
-      <span class="fame-detail-section-count">{{detail.factionRelations.length}}</span>
+      <span class="fame-detail-section-count">{{detail.factionRelationCount}}</span>
       {{#if (or @root.isGM detail.canEdit)}}<button type="button" class="fame-detail-section-add" data-action="addFactionRelation" data-entity-id="{{detail.id}}" data-tooltip="{{localize (concat @root.moduleId '.tooltips.add-faction-relation')}}"><i class="fa-solid fa-plus"></i></button>{{/if}}
     </div>
     <div class="fame-detail-section-body fame-relation-drop-zone" data-entity-id="{{detail.id}}" data-rel-type="actorFaction">
       {{#each detail.factionRelations}}
-        {{> "relations/partials/rel-row"
-          relId=factionId relName=factionName relImg=factionImg relValue=value relTier=tier relHidden=(or hidden factionHidden)
-          relType="actor-faction" barId=(concat ../detail.id ":" factionId)
-          entityType="faction" entityId=factionId
-          canEdit=(or @root.isGM ../detail.canEdit)
-          relTypeKey="actorFaction" sourceEntityId=../detail.id targetEntityId=factionId
-          showMemberStar=(and isMember (not memberHidden))
-          memberRank=rank
-          showRemoveBtn=(or @root.isGM ../detail.canEdit)
-        }}
+        {{#if isHeader}}
+          <div class="fame-detail-rel-tree-header {{#if factionHidden}}is-hidden{{/if}}" style="{{indentStyle level}}" data-action="selectEntity" data-entity-type="faction" data-entity-id="{{factionId}}">
+            <img class="fame-detail-rel-img" src="{{factionImg}}">
+            <span class="fame-detail-rel-name">{{factionName}}</span>
+          </div>
+        {{else}}
+          {{> "relations/partials/rel-row"
+            relId=factionId relName=factionName relImg=factionImg relValue=value relTier=tier relHidden=(or hidden factionHidden)
+            relType="actor-faction" barId=(concat ../detail.id ":" factionId)
+            entityType="faction" entityId=factionId
+            canEdit=(or @root.isGM ../detail.canEdit)
+            relTypeKey="actorFaction" sourceEntityId=../detail.id targetEntityId=factionId
+            showMemberStar=(and isMember (not memberHidden))
+            memberRank=rank
+            showRemoveBtn=(or @root.isGM ../detail.canEdit)
+            indentLevel=level
+          }}
+        {{/if}}
       {{else}}
         <div class="fame-no-items">{{localize (concat @root.moduleId '.relations.no-relations')}}</div>
       {{/each}}

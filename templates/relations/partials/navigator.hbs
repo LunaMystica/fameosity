@@ -4,6 +4,7 @@
       <i class="fa-solid fa-search"></i>
       <input type="text" class="fame-nav-search-input" placeholder="{{localize (concat moduleId '.picker.search')}}" value="{{navSearch}}">
     </div>
+    <button type="button" class="fame-nav-group-toggle {{#if groupByFaction}}active{{/if}}" data-action="toggleCharacterGrouping" data-tooltip="{{localize (concat moduleId '.tooltips.group-by-faction')}}"><i class="fa-solid fa-sitemap"></i></button>
   </div>
 
   {{#if ownerActor}}
@@ -104,7 +105,35 @@
         <span class="fame-nav-group-count">{{npcActors.length}}</span>
       </div>
       <div class="fame-nav-group-items">
-        {{#each npcActors}}
+        {{#each npcGroups}}
+        <div class="fame-nav-npc-group {{#if collapsed}}collapsed{{/if}}" style="--fame-group-accent:{{#if isPartyActive}}var(--fame-color-gold){{else}}{{tier.color}}{{/if}}">
+        <div class="fame-nav-item fame-nav-npc-group-header {{#if (and (eq @root.selectedType 'faction') (eq @root.selectedId id))}}selected{{/if}} {{#if hidden}}is-hidden{{/if}}" style="{{indentStyle level}}" data-action="selectEntity" data-entity-type="faction" data-entity-id="{{id}}">
+          <span class="fame-nav-tree-toggle" data-action="toggleNpcGroup" data-id="{{id}}"><i class="fa-solid fa-{{#if collapsed}}plus{{else}}minus{{/if}}-square"></i></span>
+          <img class="fame-nav-item-img" src="{{image}}">
+          <span class="fame-nav-item-name">{{name}}</span>
+          <div class="fame-nav-item-badges">
+            {{#if isPartyActive}}<i class="fa-solid fa-star fame-nav-item-star"></i>
+            {{else}}<span class="fame-nav-item-tier" style="background:{{tier.color}}"></span>{{/if}}
+            {{#if hidden}}<i class="fa-solid fa-eye-slash fame-nav-badge hidden"></i>{{/if}}
+          </div>
+        </div>
+        {{#unless collapsed}}
+        {{#each members}}
+        <div class="fame-nav-item {{#if (and (eq @root.selectedType 'actor') (eq @root.selectedId id))}}selected{{/if}} {{#if hidden}}is-hidden{{/if}}" style="{{indentStyle ../memberLevel}}" data-action="selectEntity" data-entity-type="actor" data-entity-id="{{id}}">
+          <span class="fame-nav-item-indent"></span>
+          <img class="fame-nav-item-img" src="{{img}}">
+          <span class="fame-nav-item-name">{{name}}</span>
+          <div class="fame-nav-item-badges">
+            <span class="fame-nav-item-tier" style="background:{{#if partyTier}}{{partyTier.color}}{{else}}{{tier.color}}{{/if}}"></span>
+            {{#if hidden}}<i class="fa-solid fa-eye-slash fame-nav-badge hidden"></i>{{/if}}
+          </div>
+        </div>
+        {{/each}}
+        {{/unless}}
+        </div>
+        {{/each}}
+        {{#if (and npcGroups.length ungroupedNpcs.length)}}<div class="fame-group-divider"></div>{{/if}}
+        {{#each ungroupedNpcs}}
         <div class="fame-nav-item {{#if (and (eq @root.selectedType 'actor') (eq @root.selectedId id))}}selected{{/if}} {{#if hidden}}is-hidden{{/if}}" data-action="selectEntity" data-entity-type="actor" data-entity-id="{{id}}">
           <span class="fame-nav-item-indent"></span>
           <img class="fame-nav-item-img" src="{{img}}">

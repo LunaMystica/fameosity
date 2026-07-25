@@ -27,6 +27,10 @@
       "reputationMax": {
         "name": "Maximum Reputation"
       },
+      "autoExpandGroups": {
+        "name": "Auto-Expand Faction Groups",
+        "hint": "When grouping characters by faction, expand the faction groups by default"
+      },
       "defaultActorMode": {
         "name": "Default Actor Mode",
         "hint": "Mode for newly tracked actors"
@@ -209,6 +213,7 @@
       "announce-wanted": "Announce wanted status and notify everyone",
       "cycle-mode": "Cycle mode (Auto / Hybrid / Manual)",
       "toggle-hidden": "Toggle visibility",
+      "group-by-faction": "Group characters by faction",
       "add-relation": "Add relation",
       "add-faction-relation": "Add faction relation",
       "add-faction-to-faction-relation": "Add faction relation",

@@ -16,8 +16,9 @@
   @param showMemberStar  - boolean
   @param memberRank      - rank object {name, color} or null
   @param showRemoveBtn   - boolean
+  @param indentLevel     - faction-tree depth for indentation (optional)
 --}}
-<div class="fame-detail-rel-row {{#if relHidden}}is-hidden{{/if}}">
+<div class="fame-detail-rel-row {{#if relHidden}}is-hidden{{/if}}" style="{{indentStyle indentLevel}}">
   <div class="fame-detail-rel-left">
     <img class="fame-detail-rel-img" src="{{relImg}}">
     <span class="fame-detail-rel-name clickable" data-action="selectEntity" data-entity-type="{{entityType}}" data-entity-id="{{entityId}}">{{relName}}</span>

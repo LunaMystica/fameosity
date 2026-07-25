@@ -18,7 +18,9 @@ const CACHE_MANAGED_SETTINGS = new Set([
   'reputationSettings',
   'relationTiers',
   ...Object.keys(DATA_SEGMENTS),
-  'repData-migrated'
+  'repData-migrated',
+  'groupCharactersByFaction',
+  'autoExpandGroups'
 ]);
 
 export function openRelationsViewer() {
@@ -94,6 +96,14 @@ export function registerSettings() {
     game.settings.register(MODULE_ID, segKey, { scope: "world", config: false, type: Object, default: {} });
   }
   game.settings.register(MODULE_ID, "repData-migrated", { scope: "world", config: false, type: Boolean, default: false });
+
+  // Navigator "Characters by faction" grouping. Toggled from the viewer UI, so config:false.
+  game.settings.register(MODULE_ID, "groupCharactersByFaction", { scope: "client", config: false, type: Boolean, default: true });
+  game.settings.register(MODULE_ID, "autoExpandGroups", {
+    name: game.i18n.localize(`${MODULE_ID}.settings.autoExpandGroups.name`),
+    hint: game.i18n.localize(`${MODULE_ID}.settings.autoExpandGroups.hint`),
+    scope: "client", config: true, type: Boolean, default: true
+  });
 
   game.settings.register(MODULE_ID, "relationsViewerPosition", { scope: "client", config: false, type: Object, default: {} });
   game.settings.register(MODULE_ID, "relationsViewerState", { scope: "client", config: false, type: Object, default: { closedNavGroups: [], openSections: [], treeExpandedLocations: [], treeExpandedFactions: [], navWidth: null } });
