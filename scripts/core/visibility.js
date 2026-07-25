@@ -34,12 +34,32 @@ export async function setHiddenItems(hidden) {
   ReputationEvents.emit(ReputationEvents.EVENTS.HIDDEN_CHANGED, { hidden: data.hiddenItems });
 }
 
+// Factions and locations are trees: hiding a parent (e.g. an organization)
+// cascades to its descendants (its sub-groups / child locations).
+function isAncestorHidden(key, id, hiddenArr) {
+  const data = Data.getData();
+  const items = key === 'factions' ? data.factions : data.locations;
+  if (!Array.isArray(items) || !items.length) return false;
+  const byId = new Map(items.map(i => [i.id, i]));
+  const seen = new Set();
+  let current = byId.get(id);
+  while (current?.parentId && !seen.has(current.parentId)) {
+    seen.add(current.parentId);
+    if (hiddenArr.includes(current.parentId)) return true;
+    current = byId.get(current.parentId);
+  }
+  return false;
+}
+
 export function isHidden(type, id) {
   if (!type || !id) return false;
   const hidden = getHiddenItems();
   const key = getHiddenKey(type);
   const arr = hidden[key];
-  return Array.isArray(arr) && arr.includes(id);
+  if (!Array.isArray(arr)) return false;
+  if (arr.includes(id)) return true;
+  if (key === 'factions' || key === 'locations') return isAncestorHidden(key, id, arr);
+  return false;
 }
 
 export async function toggleHidden(type, id) {

@@ -168,19 +168,27 @@
         <i class="fa-solid fa-chevron-right fame-section-chevron"></i>
         <i class="fa-solid fa-flag fame-section-icon"></i>
         <span>{{localize (concat @root.moduleId '.relations.to-factions')}}</span>
-        <span class="fame-detail-section-count">{{detail.factionToFactionRels.length}}</span>
+        <span class="fame-detail-section-count">{{detail.factionToFactionCount}}</span>
         {{#if @root.isGM}}<button type="button" class="fame-detail-section-add" data-action="addFactionToFactionRelation" data-entity-id="{{detail.id}}" data-tooltip="{{localize (concat @root.moduleId '.tooltips.add-faction-to-faction-relation')}}"><i class="fa-solid fa-plus"></i></button>{{/if}}
       </div>
       <div class="fame-detail-section-body fame-relation-drop-zone" data-entity-id="{{detail.id}}" data-rel-type="factionToFaction">
         {{#each detail.factionToFactionRels}}
-          {{> "relations/partials/rel-row"
-            relId=targetFactionId relName=targetFactionName relImg=targetFactionImg relValue=value relTier=tier relHidden=(or hidden targetHidden)
-            relType="faction-to-faction" barId=(concat ../detail.id ":" targetFactionId)
-            entityType="faction" entityId=targetFactionId
-            canEdit=@root.isGM
-            relTypeKey="factionToFaction" sourceEntityId=../detail.id targetEntityId=targetFactionId
-            showRemoveBtn=@root.isGM
-          }}
+          {{#if isHeader}}
+            <div class="fame-detail-rel-tree-header {{#if targetHidden}}is-hidden{{/if}}" style="{{indentStyle level}}" data-action="selectEntity" data-entity-type="faction" data-entity-id="{{targetFactionId}}">
+              <img class="fame-detail-rel-img" src="{{targetFactionImg}}">
+              <span class="fame-detail-rel-name">{{targetFactionName}}</span>
+            </div>
+          {{else}}
+            {{> "relations/partials/rel-row"
+              relId=targetFactionId relName=targetFactionName relImg=targetFactionImg relValue=value relTier=tier relHidden=(or hidden targetHidden)
+              relType="faction-to-faction" barId=(concat ../detail.id ":" targetFactionId)
+              entityType="faction" entityId=targetFactionId
+              canEdit=@root.isGM
+              relTypeKey="factionToFaction" sourceEntityId=../detail.id targetEntityId=targetFactionId
+              showRemoveBtn=@root.isGM
+              indentLevel=level
+            }}
+          {{/if}}
         {{else}}
           <div class="fame-no-items">{{localize (concat @root.moduleId '.relations.no-relations')}}</div>
         {{/each}}

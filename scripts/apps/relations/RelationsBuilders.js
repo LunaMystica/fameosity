@@ -35,6 +35,54 @@ export function getFactionTypeInfo(factionType, customTypeName) {
   };
 }
 
+// Depth-first order + nesting level for factions, so relation lists can render the
+// org → sub-group hierarchy (children directly under their parent, indented) instead
+// of a flat alphabetical mix. Siblings are sorted by name.
+function orderFactionsTree(allFactions) {
+  const byId = new Map(allFactions.map(f => [f.id, f]));
+  const childrenOf = new Map();
+  for (const f of allFactions) {
+    const key = (f.parentId && byId.has(f.parentId)) ? f.parentId : null;
+    if (!childrenOf.has(key)) childrenOf.set(key, []);
+    childrenOf.get(key).push(f);
+  }
+  for (const arr of childrenOf.values()) arr.sort((a, b) => a.name.localeCompare(b.name));
+  const order = new Map();
+  let idx = 0;
+  const walk = (key, level) => {
+    for (const f of (childrenOf.get(key) || [])) {
+      order.set(f.id, { index: idx++, level });
+      walk(f.id, level + 1);
+    }
+  };
+  walk(null, 0);
+  return order;
+}
+
+// Given the faction ids that have a relation row, return the full set to render in
+// tree order: each id plus all its ancestors (so a sub-group's parent org appears
+// above it), annotated with nesting level. excludeId drops the entity being viewed
+// (a faction never lists itself as its own ancestor row).
+function factionRelRenderOrder(allFactions, presentIds, excludeId = null) {
+  const order = orderFactionsTree(allFactions);
+  const byId = new Map(allFactions.map(f => [f.id, f]));
+  const render = new Set();
+  for (const fid of presentIds) {
+    render.add(fid);
+    const seen = new Set();
+    let cur = byId.get(fid);
+    while (cur?.parentId && byId.has(cur.parentId) && !seen.has(cur.parentId)) {
+      seen.add(cur.parentId);
+      render.add(cur.parentId);
+      cur = byId.get(cur.parentId);
+    }
+  }
+  if (excludeId) render.delete(excludeId);
+  return [...render]
+    .map(id => ({ id, level: order.get(id)?.level || 0, index: order.get(id)?.index ?? 0 }))
+    .sort((a, b) => a.index - b.index);
+}
+
 export function canEditActor(actorId) {
   if (game.user.isGM) return true;
   const actor = game.actors.get(actorId);
@@ -141,7 +189,20 @@ export async function buildActorData(id, min, max, pcs, rawFactions) {
     };
   }).filter(Boolean);
 
-  factionRelations.sort((a, b) => a.factionName.localeCompare(b.factionName));
+  const actorAllFactions = Core.getFactions();
+  const actorRelById = new Map(factionRelations.map(r => [r.factionId, r]));
+  const actorFacById = new Map(actorAllFactions.map(f => [f.id, f]));
+  const factionRelationsTree = factionRelRenderOrder(actorAllFactions, actorRelById.keys())
+    .map(({ id, level }) => {
+      const rel = actorRelById.get(id);
+      if (rel) { rel.level = level; return rel; }
+      const f = actorFacById.get(id);
+      return {
+        isHeader: true, level,
+        factionId: id, factionName: f.name, factionImg: f.image || 'icons/svg/mystery-man.svg',
+        factionHidden: Core.isHidden('faction', id)
+      };
+    });
 
   return {
     id, name: Core.getDisplayName(id), originalName: actor.name,
@@ -151,7 +212,8 @@ export async function buildActorData(id, min, max, pcs, rawFactions) {
     partyReputation, partyTier, hasActiveParty,
     activePartyName: activeParty?.name || null,
     relations: [...pcRelations, ...npcRelations],
-    playerRelations: pcRelations, npcRelations, factionRelations
+    playerRelations: pcRelations, npcRelations, factionRelations: factionRelationsTree,
+    factionRelationCount: factionRelations.length
   };
 }
 
@@ -250,7 +312,20 @@ export async function buildFactionData(faction, pcs, min, max, isGM) {
       };
     }).filter(Boolean);
 
-  factionToFactionRels.sort((a, b) => a.targetFactionName.localeCompare(b.targetFactionName));
+  const ftfById = new Map(factionToFactionRels.map(r => [r.targetFactionId, r]));
+  const ftfFacById = new Map(allFactions.map(f => [f.id, f]));
+  const factionToFactionRelsTree = factionRelRenderOrder(allFactions, ftfById.keys(), faction.id)
+    .map(({ id, level }) => {
+      const rel = ftfById.get(id);
+      if (rel) { rel.level = level; return rel; }
+      const f = ftfFacById.get(id);
+      return {
+        isHeader: true, level,
+        targetFactionId: id, targetFactionName: f.name,
+        targetFactionImg: f.image || 'icons/svg/mystery-man.svg',
+        targetHidden: Core.isHidden('faction', id)
+      };
+    });
 
   const partyId = Core.getActivePartyId();
   const members = (faction.members || []).map(id => {
@@ -301,7 +376,8 @@ export async function buildFactionData(faction, pcs, min, max, isGM) {
     activePartyName: activeParty?.name || null,
     factionRels: [...pcRels, ...npcRels],
     factionPcRels: pcRels, factionNpcRels: npcRels,
-    factionToFactionRels,
+    factionToFactionRels: factionToFactionRelsTree,
+    factionToFactionCount: factionToFactionRels.length,
     hasRanks: (faction.ranks || []).length > 0,
     isPartyActive, isGroup
   };

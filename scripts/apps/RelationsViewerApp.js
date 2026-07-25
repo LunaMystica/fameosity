@@ -133,11 +133,166 @@ export class RelationsViewerApp extends foundry.applications.api.HandlebarsAppli
     playerActors.sort((a, b) => a.name.localeCompare(b.name));
     npcActors.sort((a, b) => a.name.localeCompare(b.name));
 
+    // Group the Characters (NPC) section by faction (when enabled). A character is
+    // listed under every faction it is a direct member of; characters in no faction
+    // fall into an Ungrouped bucket. Faction subheaders follow full faction-tree
+    // order/indent and respect visibility (allFactionsFlat is already hidden-filtered
+    // for non-GMs).
+    //
+    // Two client settings drive this:
+    //   groupCharactersByFaction — master on/off (UI toggle).
+    //   autoExpandGroups         — default open/closed state of each group; the
+    //                              *Collapsed sets store only the user's deviations
+    //                              from that default, so toggling works either way.
+    const groupByFaction = game.settings.get(MODULE_ID, "groupCharactersByFaction");
+    const autoExpand = game.settings.get(MODULE_ID, "autoExpandGroups");
+    const isGroupCollapsed = (set, id) => (autoExpand ? set.has(id) : !set.has(id));
+
+    const orderedFactions = Core.buildTree(allFactionsFlat, new Set(allFactionsFlat.map(f => f.id)));
+    const npcGroups = [];
+    let ungroupedNpcs = npcActors;
+    // A collapsed faction hides its whole subtree, so a sub-group whose ancestor is
+    // collapsed is not emitted as its own block. orderedFactions is parent-first, so
+    // collapsedGroupIds is fully populated for any ancestor by the time we reach a child.
+    const facById = new Map(allFactionsFlat.map(f => [f.id, f]));
+    const hasCollapsedAncestor = (fac, collapsedSet) => {
+      const seen = new Set();
+      let cur = facById.get(fac.parentId);
+      while (cur && !seen.has(cur.id)) {
+        seen.add(cur.id);
+        if (collapsedSet.has(cur.id)) return true;
+        cur = facById.get(cur.parentId);
+      }
+      return false;
+    };
+    const isDescendantOf = (facId, ancestorId) => {
+      const seen = new Set();
+      let cur = facById.get(facId);
+      while (cur?.parentId && !seen.has(cur.parentId)) {
+        seen.add(cur.parentId);
+        if (cur.parentId === ancestorId) return true;
+        cur = facById.get(cur.parentId);
+      }
+      return false;
+    };
+    // actorId → set of factions it is a *direct* member of. Used to suppress an actor
+    // from an ancestor org when it is also a direct member of a descendant group.
+    const directMemberFactions = new Map();
+    for (const f of orderedFactions) {
+      for (const m of (f.members || [])) {
+        if (m.sourceFactionId !== f.id) continue;
+        let s = directMemberFactions.get(m.id);
+        if (!s) { s = new Set(); directMemberFactions.set(m.id, s); }
+        s.add(f.id);
+      }
+    }
+    const shownUnderDescendant = (actorId, facId) => {
+      const facs = directMemberFactions.get(actorId);
+      if (!facs) return false;
+      for (const fid of facs) {
+        if (fid !== facId && isDescendantOf(fid, facId)) return true;
+      }
+      return false;
+    };
+    // Given factions that have their own content, also mark every ancestor as needing
+    // to render — so an org with no direct members still shows a header above its
+    // populated sub-groups. Factions whose whole subtree is empty stay hidden.
+    const factionsToRender = (contentFacIds) => {
+      const render = new Set();
+      for (const fid of contentFacIds) {
+        render.add(fid);
+        const seen = new Set();
+        let cur = facById.get(fid);
+        while (cur?.parentId && !seen.has(cur.parentId)) {
+          seen.add(cur.parentId);
+          render.add(cur.parentId);
+          cur = facById.get(cur.parentId);
+        }
+      }
+      return render;
+    };
+
+    if (groupByFaction) {
+      const npcById = new Map(npcActors.map(a => [a.id, a]));
+      const groupedNpcIds = new Set();
+      const collapsedGroupIds = new Set();
+
+      // Direct members per faction (deduped against descendant groups).
+      const membersByFac = new Map();
+      for (const fac of orderedFactions) {
+        const members = (fac.members || [])
+          .filter(m => m.sourceFactionId === fac.id) // direct members only (skip org roll-up)
+          .filter(m => !shownUnderDescendant(m.id, fac.id)) // belongs to a child group → show there only
+          .map(m => npcById.get(m.id))
+          .filter(Boolean);
+        if (members.length) membersByFac.set(fac.id, members);
+      }
+      const renderFac = factionsToRender(membersByFac.keys());
+
+      for (const fac of orderedFactions) {
+        if (!renderFac.has(fac.id)) continue; // empty subtree → hidden
+        const members = membersByFac.get(fac.id) || []; // empty = org header above sub-groups
+        members.forEach(m => groupedNpcIds.add(m.id)); // counted as grouped even if hidden by collapse
+        const collapsed = isGroupCollapsed(this.npcGroupsCollapsed, fac.id);
+        if (collapsed) collapsedGroupIds.add(fac.id);
+        if (hasCollapsedAncestor(fac, collapsedGroupIds)) continue; // ancestor collapsed → hide block
+        members.sort((a, b) => a.name.localeCompare(b.name));
+        npcGroups.push({
+          id: fac.id, name: fac.name, image: fac.image, hidden: fac.hidden,
+          tier: fac.tier, isPartyActive: fac.isPartyActive,
+          collapsed,
+          level: fac.level, memberLevel: fac.level + 1,
+          members
+        });
+      }
+      ungroupedNpcs = npcActors.filter(a => !groupedNpcIds.has(a.id));
+    }
+
     let detail = null;
     if (this.selectedType && this.selectedId) {
       detail = buildDetail(this, this.selectedType, this.selectedId, allLocations, allFactions, allActorsFlat);
       if (detail && (isGM || detail.canEdit)) {
         detail.isEditingDescription = this._editingDescriptions.has(`${this.selectedType}:${this.selectedId}`);
+      }
+      // Group the actor detail's "Relations to Characters" by faction, mirroring the
+      // navigator Characters section. Reuses orderedFactions (full tree, unaffected by
+      // nav collapse state) and the already hidden-filtered detail.npcRelations.
+      if (detail && this.selectedType === 'actor') {
+        const relGroups = [];
+        const groupedRelIds = new Set();
+        if (groupByFaction) {
+          const collapsedRelIds = new Set();
+          const relsByFac = new Map();
+          for (const fac of orderedFactions) {
+            const memberIds = new Set(
+              (fac.members || [])
+                .filter(m => m.sourceFactionId === fac.id && !shownUnderDescendant(m.id, fac.id))
+                .map(m => m.id)
+            );
+            const rels = detail.npcRelations.filter(r => memberIds.has(r.pcId));
+            if (rels.length) relsByFac.set(fac.id, rels);
+          }
+          const renderRelFac = factionsToRender(relsByFac.keys());
+
+          for (const fac of orderedFactions) {
+            if (!renderRelFac.has(fac.id)) continue; // empty subtree → hidden
+            const rels = relsByFac.get(fac.id) || []; // empty = org header above sub-groups
+            rels.forEach(r => groupedRelIds.add(r.pcId));
+            const collapsed = isGroupCollapsed(this.relGroupsCollapsed, fac.id);
+            if (collapsed) collapsedRelIds.add(fac.id);
+            if (hasCollapsedAncestor(fac, collapsedRelIds)) continue; // ancestor collapsed → hide block
+            relGroups.push({
+              id: fac.id, name: fac.name, image: fac.image, hidden: fac.hidden,
+              tier: fac.tier, isPartyActive: fac.isPartyActive,
+              level: fac.level, memberLevel: fac.level + 1,
+              collapsed, rels
+            });
+          }
+        }
+        detail.npcRelationGroups = relGroups;
+        detail.ungroupedNpcRelations = groupByFaction
+          ? detail.npcRelations.filter(r => !groupedRelIds.has(r.pcId))
+          : detail.npcRelations;
       }
     }
 
@@ -155,7 +310,7 @@ export class RelationsViewerApp extends foundry.applications.api.HandlebarsAppli
     }
 
     return {
-      min, max, isGM, pcs, allLocations, allFactions, playerActors, npcActors,
+      min, max, isGM, pcs, allLocations, allFactions, playerActors, npcActors, npcGroups, ungroupedNpcs, groupByFaction,
       selectedType: this.selectedType, selectedId: this.selectedId,
       detail, navSearch: this.navSearch, moduleId: MODULE_ID, ownerActor,
       activePartyId: Core.getActivePartyId(),
@@ -247,6 +402,29 @@ export class RelationsViewerApp extends foundry.applications.api.HandlebarsAppli
     const { id, type } = target.dataset;
     const set = type === 'faction' ? this.treeExpandedFactions : this.treeExpandedLocations;
     set.has(id) ? set.delete(id) : set.add(id);
+    this._saveState();
+    this.render();
+  }
+
+  static #onToggleCharacterGrouping(event) {
+    event.stopPropagation();
+    const current = game.settings.get(MODULE_ID, "groupCharactersByFaction");
+    game.settings.set(MODULE_ID, "groupCharactersByFaction", !current);
+    this.render();
+  }
+
+  static #onToggleNpcGroup(event, target) {
+    event.stopPropagation();
+    const { id } = target.dataset;
+    this.npcGroupsCollapsed.has(id) ? this.npcGroupsCollapsed.delete(id) : this.npcGroupsCollapsed.add(id);
+    this._saveState();
+    this.render();
+  }
+
+  static #onToggleRelGroup(event, target) {
+    event.stopPropagation();
+    const { id } = target.dataset;
+    this.relGroupsCollapsed.has(id) ? this.relGroupsCollapsed.delete(id) : this.relGroupsCollapsed.add(id);
     this._saveState();
     this.render();
   }
@@ -612,6 +790,9 @@ export class RelationsViewerApp extends foundry.applications.api.HandlebarsAppli
       selectEntity: RelationsViewerApp.#onSelectEntity,
       toggleNavGroup: RelationsViewerApp.#onToggleNavGroup,
       toggleTreeExpand: RelationsViewerApp.#onToggleTreeExpand,
+      toggleCharacterGrouping: RelationsViewerApp.#onToggleCharacterGrouping,
+      toggleNpcGroup: RelationsViewerApp.#onToggleNpcGroup,
+      toggleRelGroup: RelationsViewerApp.#onToggleRelGroup,
       toggleDetailSection: RelationsViewerApp.#onToggleDetailSection,
       cycleActorMode: RelationsViewerApp.#onCycleActorMode,
       cycleFactionMode: RelationsViewerApp.#onCycleFactionMode,

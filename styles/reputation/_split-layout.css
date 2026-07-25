@@ -20,6 +20,9 @@ z-index: 1;
 }
 
 .fame-nav-search {
+display: flex;
+align-items: center;
+gap: var(--fame-space-xs);
 padding: var(--fame-space-sm);
 border-bottom: 1px solid var(--fame-color-border);
 flex-shrink: 0;
@@ -29,6 +32,8 @@ flex-shrink: 0;
 position: relative;
 display: flex;
 align-items: center;
+flex: 1;
+min-width: 0;
 }
 
 .fame-nav-search-box i {
@@ -126,8 +131,67 @@ font-weight: 400;
 opacity: 0.6;
 }
 
+.fame-nav-group-toggle {
+display: flex;
+align-items: center;
+justify-content: center;
+flex-shrink: 0;
+width: 1.7rem;
+height: 1.7rem;
+background: none;
+border: 1px solid var(--fame-color-border);
+border-radius: var(--fame-radius-sm);
+padding: 0;
+margin: 0;
+cursor: pointer;
+font-size: 0.8rem;
+color: var(--fame-color-text-secondary);
+opacity: 0.55;
+transition: color 0.1s ease, opacity 0.1s ease, border-color 0.1s ease;
+}
+
+.fame-nav-group-toggle:hover {
+opacity: 1;
+color: var(--fame-color-gold);
+}
+
+.fame-nav-group-toggle.active {
+opacity: 1;
+color: var(--fame-color-gold);
+border-color: var(--fame-color-gold);
+}
+
 .fame-nav-group-items {
 display: none;
+}
+
+.fame-nav-npc-group {
+position: relative;
+margin: var(--fame-space-xs) 0;
+border-left: 2px solid var(--fame-group-accent, var(--fame-color-border));
+border-radius: var(--fame-radius-sm);
+background: color-mix(in srgb, var(--fame-group-accent, transparent) 6%, transparent);
+}
+
+.fame-nav-npc-group.collapsed {
+background: none;
+}
+
+.fame-nav-npc-group-header {
+font-weight: 600;
+}
+
+.fame-group-divider {
+height: 1px;
+margin: var(--fame-space-sm) var(--fame-space-lg);
+border: none;
+background: linear-gradient(
+  to right,
+  transparent,
+  var(--fame-color-gold) 50%,
+  transparent
+);
+opacity: 0.4;
 }
 
 .fame-nav-group.open .fame-nav-group-items {
@@ -537,6 +601,25 @@ background: var(--fame-color-surface-hover);
 
 .fame-detail-rel-row.is-hidden {
 opacity: 0.45;
+}
+
+.fame-detail-rel-tree-header {
+display: flex;
+align-items: center;
+gap: var(--fame-space-sm);
+padding: var(--fame-space-xs);
+margin-bottom: var(--fame-space-xs);
+cursor: pointer;
+font-weight: 600;
+opacity: 0.85;
+}
+
+.fame-detail-rel-tree-header.is-hidden {
+opacity: 0.45;
+}
+
+.fame-detail-rel-tree-header:hover .fame-detail-rel-name {
+color: var(--fame-color-gold);
 }
 
 .fame-detail-rel-left {

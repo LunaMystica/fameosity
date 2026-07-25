@@ -7,6 +7,8 @@ export function loadState(app) {
   app.openSections = new Set(saved.openSections || []);
   app.treeExpandedLocations = new Set(saved.treeExpandedLocations || []);
   app.treeExpandedFactions = new Set(saved.treeExpandedFactions || []);
+  app.npcGroupsCollapsed = new Set(saved.npcGroupsCollapsed || []);
+  app.relGroupsCollapsed = new Set(saved.relGroupsCollapsed || []);
   app.navWidth = saved.navWidth || null;
   app.selectedType = saved.selectedType || null;
   app.selectedId = saved.selectedId || null;
@@ -21,6 +23,8 @@ export function saveState(app) {
     openSections: [...app.openSections],
     treeExpandedLocations: [...app.treeExpandedLocations],
     treeExpandedFactions: [...app.treeExpandedFactions],
+    npcGroupsCollapsed: [...app.npcGroupsCollapsed],
+    relGroupsCollapsed: [...app.relGroupsCollapsed],
     navWidth: app.navWidth,
     selectedType: app.selectedType,
     selectedId: app.selectedId,
