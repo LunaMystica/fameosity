@@ -27,6 +27,10 @@
       "reputationMax": {
         "name": "Maximum Reputation"
       },
+      "groupDetailRelationsByFaction": {
+        "name": "Group Character Relations by Faction",
+        "hint": "In a character's detail pane, group their relations to other characters under those characters' factions. Independent of the navigator's grouping toggle"
+      },
       "autoExpandGroups": {
         "name": "Auto-Expand Faction Groups",
         "hint": "When grouping characters by faction, expand the faction groups by default"

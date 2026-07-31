@@ -20,6 +20,7 @@ const CACHE_MANAGED_SETTINGS = new Set([
   ...Object.keys(DATA_SEGMENTS),
   'repData-migrated',
   'groupCharactersByFaction',
+  'groupDetailRelationsByFaction',
   'autoExpandGroups'
 ]);
 
@@ -99,6 +100,18 @@ export function registerSettings() {
 
   // Navigator "Characters by faction" grouping. Toggled from the viewer UI, so config:false.
   game.settings.register(MODULE_ID, "groupCharactersByFaction", { scope: "client", config: false, type: Boolean, default: true });
+  // Same grouping inside an actor's detail pane ("Relations to Characters"). Independent
+  // of the navigator toggle above, and world-scoped so the GM sets it for everyone.
+  game.settings.register(MODULE_ID, "groupDetailRelationsByFaction", {
+    name: game.i18n.localize(`${MODULE_ID}.settings.groupDetailRelationsByFaction.name`),
+    hint: game.i18n.localize(`${MODULE_ID}.settings.groupDetailRelationsByFaction.hint`),
+    scope: "world", config: true, type: Boolean, default: true,
+    onChange: () => {
+      for (const app of foundry.applications.instances.values()) {
+        if (app instanceof RelationsViewerApp) app.render();
+      }
+    }
+  });
   game.settings.register(MODULE_ID, "autoExpandGroups", {
     name: game.i18n.localize(`${MODULE_ID}.settings.autoExpandGroups.name`),
     hint: game.i18n.localize(`${MODULE_ID}.settings.autoExpandGroups.hint`),

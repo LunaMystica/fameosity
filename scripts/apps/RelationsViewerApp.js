@@ -140,11 +140,14 @@ export class RelationsViewerApp extends foundry.applications.api.HandlebarsAppli
     // for non-GMs).
     //
     // Two client settings drive this:
-    //   groupCharactersByFaction — master on/off (UI toggle).
-    //   autoExpandGroups         — default open/closed state of each group; the
-    //                              *Collapsed sets store only the user's deviations
-    //                              from that default, so toggling works either way.
+    //   groupCharactersByFaction      — navigator on/off (client, UI toggle).
+    //   groupDetailRelationsByFaction — actor detail pane on/off (world, GM setting).
+    //   autoExpandGroups              — default open/closed state of each group; the
+    //                                   *Collapsed sets store only the user's deviations
+    //                                   from that default, so toggling works either way.
+    //                                   Shared by both groupings.
     const groupByFaction = game.settings.get(MODULE_ID, "groupCharactersByFaction");
+    const groupDetailByFaction = game.settings.get(MODULE_ID, "groupDetailRelationsByFaction");
     const autoExpand = game.settings.get(MODULE_ID, "autoExpandGroups");
     const isGroupCollapsed = (set, id) => (autoExpand ? set.has(id) : !set.has(id));
 
@@ -257,10 +260,11 @@ export class RelationsViewerApp extends foundry.applications.api.HandlebarsAppli
       // Group the actor detail's "Relations to Characters" by faction, mirroring the
       // navigator Characters section. Reuses orderedFactions (full tree, unaffected by
       // nav collapse state) and the already hidden-filtered detail.npcRelations.
+      // Driven by its own world setting, independent of the navigator's client toggle.
       if (detail && this.selectedType === 'actor') {
         const relGroups = [];
         const groupedRelIds = new Set();
-        if (groupByFaction) {
+        if (groupDetailByFaction) {
           const collapsedRelIds = new Set();
           const relsByFac = new Map();
           for (const fac of orderedFactions) {
@@ -290,7 +294,7 @@ export class RelationsViewerApp extends foundry.applications.api.HandlebarsAppli
           }
         }
         detail.npcRelationGroups = relGroups;
-        detail.ungroupedNpcRelations = groupByFaction
+        detail.ungroupedNpcRelations = groupDetailByFaction
           ? detail.npcRelations.filter(r => !groupedRelIds.has(r.pcId))
           : detail.npcRelations;
       }
